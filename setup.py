@@ -21,15 +21,15 @@ def get_version(rel_path):
 
 
 core_requirements = [
-    "torch>1.13",
+    # "torch>1.13",
     "moviepy",
     "natsort",
     "omegaconf",
     "hydra-core",
     "hydra-joblib-launcher",
     # Fix for solver_iter before 1.0.0
-    "gymnasium @ git+https://git@github.com/stepjam/Gymnasium.git@0.29.2",
-    "wandb<=0.15.12",
+    # "gymnasium @ git+https://git@github.com/stepjam/Gymnasium.git@0.29.2",
+    # "wandb<=0.15.12",
     "termcolor",
     "opencv-python-headless",
     "numpy<2",
