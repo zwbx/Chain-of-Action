@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, TypeAlias, Optional
+from typing import Iterator, Optional
 
 import numpy as np
 import torch
@@ -10,10 +10,8 @@ from robobase.intrinsic_reward_module.core import IntrinsicRewardModule
 from robobase.replay_buffer.replay_buffer import ReplayBuffer
 
 
-BatchedActionSequence: TypeAlias = np.ndarray[
-    tuple[int, int, int], np.dtype[np.float32]
-]
-Metrics: TypeAlias = dict[str, np.ndarray]
+BatchedActionSequence = np.ndarray[tuple[int, int, int], np.dtype[np.float32]]
+Metrics = dict[str, np.ndarray]
 
 
 class Method(nn.Module, ABC):

@@ -13,7 +13,7 @@ import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Type
+from typing import Callable, Type, Union
 import math
 from multiprocessing import Value
 from collections import defaultdict
@@ -822,9 +822,7 @@ class UniformReplayBuffer(ReplayBuffer):
             return self._sample_non_sequential(global_index)
 
     @override
-    def sample(
-        self, batch_size: int | None = None, indices: list[int] = None
-    ) -> np.ndarray:
+    def sample(self, batch_size: int = None, indices: list[int] = None) -> np.ndarray:
         batch_size = self._batch_size if batch_size is None else batch_size
         if indices is not None and len(indices) != batch_size:
             raise ValueError(

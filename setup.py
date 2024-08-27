@@ -21,15 +21,12 @@ def get_version(rel_path):
 
 
 core_requirements = [
-    # "torch>1.13",
     "moviepy",
     "natsort",
     "omegaconf",
     "hydra-core",
     "hydra-joblib-launcher",
-    # Fix for solver_iter before 1.0.0
-    # "gymnasium @ git+https://git@github.com/stepjam/Gymnasium.git@0.29.2",
-    # "wandb<=0.15.12",
+    "gymnasium @ git+https://git@github.com/stepjam/Gymnasium.git@0.29.2",
     "termcolor",
     "opencv-python-headless",
     "numpy<2",
@@ -37,7 +34,7 @@ core_requirements = [
     "timm",
     "scipy",
     "einops",
-    "diffusers==0.29.0",
+    "diffusers",
 ]
 
 setuptools.setup(
@@ -45,7 +42,7 @@ setuptools.setup(
     name="robobase",
     author="robobase",
     packages=setuptools.find_packages(),
-    python_requires=">=3.10",
+    python_requires=">=3.9",
     install_requires=core_requirements,
     package_data={
         "": [str(p.resolve()) for p in Path("robobase/cfgs/").glob("**/*.yaml")]
@@ -59,7 +56,7 @@ setuptools.setup(
             "rlbench @ git+https://git@github.com/stepjam/RLBench.git@b80e51feb3694d9959cb8c0408cd385001b01382",
         ],
         "bigym": [
-            "bigym @ git+https://github.com/chernyadev/bigym.git",
+            "bigym @ git+https://github.com/Yusufma03/bigym.git",
         ],
         "d4rl": [
             "d4rl @ git+https://github.com/Farama-Foundation/d4rl@master#egg=d4rl",

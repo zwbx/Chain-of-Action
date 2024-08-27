@@ -459,24 +459,26 @@ class RLBenchEnv(gym.Env):
                 "This may take a while..."
             )
         raw_demos = self._task.get_demos(num_demos, live_demos=live_demos)
-        match self._action_mode_type:
-            case ActionModeType.END_EFFECTOR_POSE:
-                raw_demos = self.get_nbp_demos(raw_demos)
-                action_func = observations_to_action_with_onehot_gripper_nbp
-            case ActionModeType.JOINT_POSITION:
-                action_func = observations_to_action_with_onehot_gripper
 
-                # NOTE: Check there is a misc["joint_position_action"]
-                is_joint_position_action_included = False
-                for obs in raw_demos[0]:
-                    if "joint_position_action" in obs.misc:
-                        is_joint_position_action_included = True
-                        break
-                assert is_joint_position_action_included, (
-                    "`joint_position_action` is not in obs.misc, "
-                    "which could severely affect performance. Please use the "
-                    "latest version of PyRep and RLBench for collecting demos."
-                )
+        if self._action_mode_type == ActionModeType.END_EFFECTOR_POSE:
+            raw_demos = self.get_nbp_demos(raw_demos)
+            action_func = observations_to_action_with_onehot_gripper_nbp
+        elif self._action_mode_type == ActionModeType.JOINT_POSITION:
+            action_func = observations_to_action_with_onehot_gripper
+
+            # NOTE: Check there is a misc["joint_position_action"]
+            is_joint_position_action_included = False
+            for obs in raw_demos[0]:
+                if "joint_position_action" in obs.misc:
+                    is_joint_position_action_included = True
+                    break
+            assert is_joint_position_action_included, (
+                "`joint_position_action` is not in obs.misc, "
+                "which could severely affect performance. Please use the "
+                "latest version of PyRep and RLBench for collecting demos."
+            )
+        else:
+            raise KeyError("Wrong action mode.")
 
         demos_to_load = _convert_rlbench_demos_for_loading(
             raw_demos,
@@ -531,16 +533,14 @@ def _get_demo_fn(cfg, num_demos, demo_list):
     # reflect this and ensure low_dim_state is consitent
     # for demo and rollout steps.
 
-    match ActionModeType[cfg.env.action_mode]:
-        case ActionModeType.END_EFFECTOR_POSE:
-            obs_config_demo.joint_velocities = True
-            obs_config_demo.gripper_matrix = True
-
-        case ActionModeType.JOINT_POSITION:
-            pass
-
-        case _:
-            raise ValueError(f"Unsupported action mode type: {cfg.env.action_mode}")
+    action_mode_type = getattr(ActionModeType, cfg.env.action_mode)
+    if action_mode_type == ActionModeType.END_EFFECTOR_POSE:
+        obs_config_demo.joint_velocities = True
+        obs_config_demo.gripper_matrix = True
+    elif action_mode_type == ActionModeType.JOINT_POSITION:
+        pass
+    else:
+        raise ValueError(f"Unsupported action mode type: {cfg.env.action_mode}")
 
     # Get common true attribute in both configs and alter ROBOT_STATE_KEYS
     common_true = [
@@ -592,34 +592,31 @@ def _make_env(cfg: DictConfig, obs_config: dict):
 
 
 def _get_action_mode(action_mode_type: ActionModeType):
-    match action_mode_type:
-        case ActionModeType.END_EFFECTOR_POSE:
+    if action_mode_type == ActionModeType.END_EFFECTOR_POSE:
 
-            class CustomMoveArmThenGripper(MoveArmThenGripper):
-                def action_bounds(
-                    self,
-                ):  ## x,y,z,quat,gripper -> 8. Limited by rlbench scene workspace
-                    return (
-                        np.array(
-                            [-0.3, -0.5, 0.6] + 3 * [-1.0] + 2 * [0.0],
-                            dtype=np.float32,
-                        ),
-                        np.array([0.7, 0.5, 1.6] + 4 * [1.0] + [1.0], dtype=np.float32),
-                    )
+        class CustomMoveArmThenGripper(MoveArmThenGripper):
+            def action_bounds(
+                self,
+            ):  ## x,y,z,quat,gripper -> 8. Limited by rlbench scene workspace
+                return (
+                    np.array(
+                        [-0.3, -0.5, 0.6] + 3 * [-1.0] + 2 * [0.0],
+                        dtype=np.float32,
+                    ),
+                    np.array([0.7, 0.5, 1.6] + 4 * [1.0] + [1.0], dtype=np.float32),
+                )
 
-            action_mode = CustomMoveArmThenGripper(
-                EndEffectorPoseViaPlanning(), Discrete()
-            )
-        case ActionModeType.JOINT_POSITION:
+        action_mode = CustomMoveArmThenGripper(EndEffectorPoseViaPlanning(), Discrete())
+    elif action_mode_type == ActionModeType.JOINT_POSITION:
 
-            class CustomMoveArmThenGripper(MoveArmThenGripper):
-                def action_bounds(self):
-                    return (
-                        np.array(7 * [-0.2] + [0.0], dtype=np.float32),
-                        np.array(7 * [0.2] + [1.0], dtype=np.float32),
-                    )
+        class CustomMoveArmThenGripper(MoveArmThenGripper):
+            def action_bounds(self):
+                return (
+                    np.array(7 * [-0.2] + [0.0], dtype=np.float32),
+                    np.array(7 * [0.2] + [1.0], dtype=np.float32),
+                )
 
-            action_mode = CustomMoveArmThenGripper(JointPosition(False), Discrete())
+        action_mode = CustomMoveArmThenGripper(JointPosition(False), Discrete())
 
     return action_mode
 
@@ -748,26 +745,26 @@ class RLBenchEnvFactory(EnvFactory):
             add_demo_to_replay_buffer(demo_env, buffer)
 
     def _rescale_demo_action_helper(self, info, cfg: DictConfig):
-        match ActionModeType[cfg.env.action_mode]:
-            case ActionModeType.END_EFFECTOR_POSE:
-                return RescaleFromTanhEEPose.transform_to_tanh(
+        action_mode = ActionModeType[cfg.env.action_mode]
+        if action_mode == ActionModeType.END_EFFECTOR_POSE:
+            return RescaleFromTanhEEPose.transform_to_tanh(
+                info["demo_action"], self._action_space
+            )
+        elif action_mode == ActionModeType.JOINT_POSITION:
+            if cfg.use_standardization:
+                return RescaleFromTanhWithStandardization.transform_to_tanh(
+                    info["demo_action"], action_stats=self._action_stats
+                )
+            elif cfg.use_min_max_normalization:
+                return RescaleFromTanhWithMinMax.transform_to_tanh(
+                    info["demo_action"],
+                    action_stats=self._action_stats,
+                    min_max_margin=cfg.min_max_margin,
+                )
+            else:
+                return RescaleFromTanh.transform_to_tanh(
                     info["demo_action"], self._action_space
                 )
-            case ActionModeType.JOINT_POSITION:
-                if cfg.use_standardization:
-                    return RescaleFromTanhWithStandardization.transform_to_tanh(
-                        info["demo_action"], action_stats=self._action_stats
-                    )
-                elif cfg.use_min_max_normalization:
-                    return RescaleFromTanhWithMinMax.transform_to_tanh(
-                        info["demo_action"],
-                        action_stats=self._action_stats,
-                        min_max_margin=cfg.min_max_margin,
-                    )
-                else:
-                    return RescaleFromTanh.transform_to_tanh(
-                        info["demo_action"], self._action_space
-                    )
 
     def _compute_action_stats(self, demos: List[List[DemoStep]]):
         """Compute statistics from demonstration actions, which could be useful for

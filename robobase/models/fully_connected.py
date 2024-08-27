@@ -1,6 +1,6 @@
 from abc import ABC
 
-from typing import Tuple
+from typing import Tuple, Union
 import numpy as np
 import torch
 from torch import nn as nn
@@ -14,7 +14,7 @@ from robobase.models.core import (
 
 
 class FullyConnectedModule(RoboBaseModule, ABC):
-    def __init__(self, input_shapes: dict[str, tuple], output_shape: int | Tuple):
+    def __init__(self, input_shapes: dict[str, tuple], output_shape: Union[int, Tuple]):
         super().__init__()
         self.input_shapes = input_shapes
         if isinstance(output_shape, int):

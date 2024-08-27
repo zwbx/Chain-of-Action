@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 import copy
 import collections
 import logging
@@ -258,7 +258,7 @@ def _make_env(cfg: DictConfig) -> gym_old.Env:
 
 class D4RLEnvFactory(EnvFactory):
     def _wrap_env(
-        self, env: gym_old.Env | gym.Env, cfg: DictConfig, return_raw_spaces=False
+        self, env: Union[gym_old.Env, gym.Env], cfg: DictConfig, return_raw_spaces=False
     ):
         if return_raw_spaces:
             action_space = copy.deepcopy(env.action_space)

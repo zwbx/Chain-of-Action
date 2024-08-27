@@ -114,7 +114,7 @@ class RecedingHorizonControl(ActionSequence):
         self._cur_step = 0
 
     def reset(
-        self, *, seed: int | None = None, options: Dict[str, Any] | None = None
+        self, *, seed: int = None, options: Dict[str, Any] = None
     ) -> tuple[Any, dict[str, Any]]:
         self._init_action_history()
         return super().reset(seed=seed, options=options)

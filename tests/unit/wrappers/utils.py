@@ -75,7 +75,7 @@ class DummyEEEnv(gym.Env):
 
 
 class DummyRewardEnv(DummyEnv):
-    def __init__(self, episode_len: int = 5, default_reward: float | None = None):
+    def __init__(self, episode_len: int = 5, default_reward: float = None):
         super().__init__(episode_len)
         self._default_reward = default_reward
 
