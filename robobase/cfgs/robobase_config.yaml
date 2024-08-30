@@ -13,7 +13,7 @@ replay_size_before_train: 2000
 num_pretrain_steps: 0
 num_train_frames: 1100000
 eval_every_steps: 10000
-num_eval_episodes: 10
+num_eval_episodes: 1
 update_every_steps: 2
 num_explore_steps: 2000
 save_snapshot: false

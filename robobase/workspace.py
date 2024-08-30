@@ -27,6 +27,8 @@ import torch
 import gymnasium as gym
 from torch.utils.data import DataLoader
 
+from accelerate import Accelerator, DistributedDataParallelKwargs
+
 torch.backends.cudnn.benchmark = True
 
 
@@ -101,6 +103,8 @@ class Workspace:
         create_replay_fn: Callable[[DictConfig], ReplayBuffer] = None,
         work_dir: str = None,
     ):
+        self.accelerator = Accelerator(kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=True)])
+
         if env_factory is None:
             env_factory = _create_default_envs(cfg)
         if create_replay_fn is None:
@@ -134,23 +138,12 @@ class Workspace:
 
         self.cfg = cfg
         utils.set_seed_everywhere(cfg.seed)
-        dev = "cpu"
-        if cfg.num_gpus > 0:
-            if sys.platform == "darwin":
-                dev = "mps"
-            else:
-                dev = 0
-                job_num = False
-                try:
-                    job_num = HydraConfig.get().job.get("num", False)
-                except ValueError:
-                    pass
-                if job_num:
-                    dev = job_num % cfg.num_gpus
-        self.device = torch.device(dev)
+        self.device = self.accelerator.device
 
         # create logger
-        self.logger = Logger(self.work_dir, cfg=self.cfg)
+        self.logger = None
+        if self.accelerator.is_main_process:
+            self.logger = Logger(self.work_dir, cfg=self.cfg)
         self.env_factory = env_factory
 
         if (num_demos := cfg.demos) > 0:
@@ -187,6 +180,7 @@ class Workspace:
 
         self.agent = hydra.utils.instantiate(
             cfg.method,
+            accelerator=self.accelerator,
             device=self.device,
             observation_space=observation_space,
             action_space=action_space,
@@ -209,6 +203,7 @@ class Workspace:
             pin_memory=cfg.replay.pin_memory,
             worker_init_fn=_worker_init_fn,
         )
+        self.replay_loader = self.accelerator.prepare_data_loader(self.replay_loader)
         self._replay_iter = None
 
         # Create a separate demo replay that contains successful episodes.
@@ -380,7 +375,7 @@ class Workspace:
         if successes is not None:
             metrics["episode_success"] = successes / episode
         if self.cfg.log_eval_video and len(first_rollout) > 0:
-            metrics["eval_rollout"] = dict(video=first_rollout, fps=4)
+            metrics["eval_rollout"] = dict(video=first_rollout[::5], fps=4)
         self.agent.set_eval_env_running(False)
         return metrics
 
@@ -601,16 +596,18 @@ class Workspace:
 
                 if should_pretrain_log(self.pretrain_steps):
                     pretrain_metrics.update(self._get_common_metrics())
-                    self.logger.log_metrics(
-                        pretrain_metrics, self.pretrain_steps, prefix="pretrain"
-                    )
+                    if self.logger:
+                        self.logger.log_metrics(
+                            pretrain_metrics, self.pretrain_steps, prefix="pretrain"
+                        )
 
                 if should_pretrain_eval(self.pretrain_steps):
                     eval_metrics = self._eval()
                     eval_metrics.update(self._get_common_metrics())
-                    self.logger.log_metrics(
-                        eval_metrics, self.pretrain_steps, prefix="pretrain_eval"
-                    )
+                    if self.logger:
+                        self.logger.log_metrics(
+                            eval_metrics, self.pretrain_steps, prefix="pretrain_eval"
+                        )
 
                 self._pretrain_step += 1
 
@@ -670,14 +667,16 @@ class Workspace:
                             * self.cfg.action_repeat,
                         }
                     )
-                self.logger.log_metrics(metrics, self.global_env_steps, prefix="train")
+                if self.logger:
+                    self.logger.log_metrics(metrics, self.global_env_steps, prefix="train")
 
             if should_eval(self.main_loop_iterations):
                 eval_metrics = self._eval()
                 eval_metrics.update(self._get_common_metrics())
-                self.logger.log_metrics(
-                    eval_metrics, self.global_env_steps, prefix="eval"
-                )
+                if self.logger:
+                    self.logger.log_metrics(
+                        eval_metrics, self.global_env_steps, prefix="eval"
+                    )
 
             if should_save_snapshot(self.main_loop_iterations):
                 self.save_snapshot()

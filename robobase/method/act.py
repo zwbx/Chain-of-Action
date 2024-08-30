@@ -20,6 +20,7 @@ from robobase.method.utils import (
     extract_many_from_batch,
 )
 from robobase.models.act.backbone import build_backbone, build_film_backbone
+from accelerate import Accelerator
 
 
 class ImageEncoderACT(RoboBaseModule):
@@ -278,6 +279,7 @@ class ACTPolicy(nn.Module):
 class ActBCAgent(BC):
     def __init__(
         self,
+        accelerator: Accelerator,
         lr_backbone: float = 1e-5,
         weight_decay: float = 1e-4,
         use_lang_cond: bool = False,
@@ -292,6 +294,7 @@ class ActBCAgent(BC):
             lr_backbone (float): Learning rate for the backbone.
             weight_decay (float): Weight decay for optimization.
         """
+        self.accelerator = accelerator
         self.lr_backbone = lr_backbone
         self.weight_decay = weight_decay
         super().__init__(*args, **kwargs)
@@ -315,6 +318,7 @@ class ActBCAgent(BC):
             actor_model=self.actor_model,
             encoder_model=self.encoder,
         ).to(self.device)
+        self.actor = self.accelerator.prepare_model(self.actor)
 
         param_dicts = [
             {
@@ -337,6 +341,7 @@ class ActBCAgent(BC):
         self.actor_opt = torch.optim.AdamW(
             param_dicts, lr=self.lr, weight_decay=self.weight_decay
         )
+        self.actor_opt = self.accelerator.prepare_optimizer(self.actor_opt)
 
     def train(self, training=True):
         self.training = training
@@ -403,11 +408,11 @@ class ActBCAgent(BC):
         image = rgb.float().detach()
 
         task_emb = None
-        if self.actor.encoder_model.use_lang_cond:
-            lang_tokens = flatten_time_dim_into_channel_dim(
-                extract_from_spec(batch, "lang_tokens")
-            )
-            task_emb, _ = self.encode_clip_text(lang_tokens)
+        # if self.actor.encoder_model.use_lang_cond:
+        #     lang_tokens = flatten_time_dim_into_channel_dim(
+        #         extract_from_spec(batch, "lang_tokens")
+        #     )
+        #     task_emb, _ = self.encode_clip_text(lang_tokens)
 
         # If action contains all zeros, it is padded.
         is_pad = actions.sum(axis=-1) == 0
@@ -421,7 +426,8 @@ class ActBCAgent(BC):
             if self.use_multicam_fusion and self.view_fusion_opt is not None:
                 self.view_fusion_opt.zero_grad(set_to_none=True)
         self.actor_opt.zero_grad(set_to_none=True)
-        loss_dict["loss"].backward()
+        # loss_dict["loss"].backward()
+        self.accelerator.backward(loss_dict["loss"])
 
         # step optimizer
         if self.actor_grad_clip:
