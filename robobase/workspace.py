@@ -1,6 +1,5 @@
 import shutil
 import signal
-import sys
 import time
 import random
 from typing import Callable, Any
@@ -8,7 +7,6 @@ from functools import partial
 import logging
 
 from gymnasium import spaces
-from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 
 from robobase import utils
@@ -103,7 +101,9 @@ class Workspace:
         create_replay_fn: Callable[[DictConfig], ReplayBuffer] = None,
         work_dir: str = None,
     ):
-        self.accelerator = Accelerator(kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=True)])
+        self.accelerator = Accelerator(
+            kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=True)]
+        )
 
         if env_factory is None:
             env_factory = _create_default_envs(cfg)
@@ -668,7 +668,9 @@ class Workspace:
                         }
                     )
                 if self.logger:
-                    self.logger.log_metrics(metrics, self.global_env_steps, prefix="train")
+                    self.logger.log_metrics(
+                        metrics, self.global_env_steps, prefix="train"
+                    )
 
             if should_eval(self.main_loop_iterations):
                 eval_metrics = self._eval()
