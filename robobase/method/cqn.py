@@ -478,7 +478,7 @@ class CQN(ValueBased):
             if self.use_multicam_fusion and self.view_fusion_opt is not None:
                 self.view_fusion_opt.zero_grad(set_to_none=True)
         critic_opt.zero_grad(set_to_none=True)
-        critic_loss.backward()
+        self.accelerator.backward(critic_loss)
         if self.critic_grad_clip:
             critic_norm = nn.utils.clip_grad_norm_(
                 critic.parameters(), self.critic_grad_clip

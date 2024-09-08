@@ -61,7 +61,7 @@ replay:
 # logging settings
 wandb:  # weight and bias
   use: false
-  project: ${oc.env:USER}RoboBase
+  project: RoboBase
   name: null
 
 tb:  # TensorBoard

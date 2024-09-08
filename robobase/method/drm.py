@@ -226,7 +226,8 @@ class DrM(DrQV2):
             metrics["vf_loss"] = vf_loss.item()
 
         value_opt.zero_grad(set_to_none=True)
-        vf_loss.backward()
+        self.accelerator.backward(vf_loss)
+
         value_opt.step()
 
         return metrics

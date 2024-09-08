@@ -281,6 +281,8 @@ class ValueBased(OffPolicyMethod, ABC):
                 self.intr_critic_opt,
             ) = self.build_critic()
 
+        self.prepare_accelerator()
+
     def build_critic(self):
         """Build critic for ValueBased agent
 
@@ -424,7 +426,7 @@ class ValueBased(OffPolicyMethod, ABC):
         if loss is None:
             return {}
         self.encoder.zero_grad(set_to_none=True)
-        loss.backward()
+        self.accelerator.backward(loss)
         self.encoder_opt.step()
         return {"encoder_rep_loss": loss.item()}
 
@@ -448,7 +450,7 @@ class ValueBased(OffPolicyMethod, ABC):
         ), "Use `update_encoder_rep` to only update the encoder parameters."
         self.encoder.zero_grad(set_to_none=True)
         self.view_fusion_opt.zero_grad(set_to_none=True)
-        loss.backward()
+        self.accelerator.backward(loss)
         self.encoder_opt.step()
         self.view_fusion_opt.step()
         return {"view_fusion_rep_loss": loss.item()}
@@ -596,7 +598,7 @@ class ValueBased(OffPolicyMethod, ABC):
             if self.use_multicam_fusion and self.view_fusion_opt is not None:
                 self.view_fusion_opt.zero_grad(set_to_none=True)
         critic_opt.zero_grad(set_to_none=True)
-        critic_loss.backward()
+        self.accelerator.backward(critic_loss)
         if self.critic_grad_clip:
             critic_norm = nn.utils.clip_grad_norm_(
                 critic.parameters(), self.critic_grad_clip

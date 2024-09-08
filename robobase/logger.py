@@ -194,11 +194,13 @@ class Logger(object):
     def _try_log(self, key, value, step, is_video=False):
         if self._use_wandb:
             if is_video:
-                self._wandb_logs[key] = wandb.Video(
-                    np.array([value["video"]]).transpose(0, 1, 4, 2, 3),
-                    step,
-                    fps=value["fps"],
-                )
+                # self._wandb_logs[key] = wandb.Video(
+                #     np.moveaxis(np.array([value["video"]])[0], 3, 1),
+                #     step,
+                #     fps=value["fps"],
+                # )
+                # TODO: Fix the video logging with byted-wandb
+                pass
 
             elif np.isscalar(value) or value.size == 1:
                 self._wandb_logs[key] = value

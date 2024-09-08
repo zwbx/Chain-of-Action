@@ -224,7 +224,7 @@ class Diffusion(BC):
             if self.use_multicam_fusion and self.view_fusion_opt is not None:
                 self.view_fusion_opt.zero_grad(set_to_none=True)
         self.actor_opt.zero_grad(set_to_none=True)
-        actor_loss.backward()
+        self.accelerator.backward(actor_loss)
         if self.actor_grad_clip:
             nn.utils.clip_grad_norm_(self.actor.parameters(), self.actor_grad_clip)
         self.actor_opt.step()

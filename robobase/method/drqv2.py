@@ -106,7 +106,7 @@ class DrQV2(ActorCritic):
 
         # optimize actor
         self.actor_opt.zero_grad(set_to_none=True)
-        actor_loss.backward()
+        self.accelerator.backward(actor_loss)
         if self.actor_grad_clip:
             nn.utils.clip_grad_norm_(self.actor.parameters(), self.actor_grad_clip)
         self.actor_opt.step()

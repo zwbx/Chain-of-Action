@@ -175,7 +175,7 @@ class SACLix(ActorCritic):
 
         # optimize actor
         self.actor_opt.zero_grad(set_to_none=True)
-        actor_loss.backward()
+        self.accelerator.backward(actor_loss)
         if self.actor_grad_clip:
             nn.utils.clip_grad_norm_(self.actor.parameters(), self.actor_grad_clip)
         self.actor_opt.step()
@@ -184,7 +184,7 @@ class SACLix(ActorCritic):
         alpha_loss = (
             -self.log_alpha.exp() * (log_prob + self.target_entropy).detach()
         ).mean()
-        alpha_loss.backward()
+        self.accelerator.backward(alpha_loss)
         self.a_optimizer.step()
         alpha = self.log_alpha.exp().item()
         if self.logging:

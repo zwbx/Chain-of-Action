@@ -426,7 +426,7 @@ class DiffusionRL(ActorCritic):
 
         # Gradient descent
         self.actor_opt.zero_grad()
-        total_loss.backward()
+        self.accelerator.backward(total_loss)
         if self.actor_grad_clip:
             actor_grad_norm = nn.utils.clip_grad_norm_(
                 self.actor.parameters(), self.actor_grad_clip
@@ -503,7 +503,7 @@ class DiffusionRL(ActorCritic):
 
         # optimize encoder and critic
         critic_opt.zero_grad(set_to_none=True)
-        critic_loss.backward()
+        self.accelerator.backward(critic_loss)
         if self.critic_grad_clip:
             critic_grad_norm = nn.utils.clip_grad_norm_(
                 critic.parameters(), self.critic_grad_clip

@@ -758,7 +758,7 @@ class DreamerV3(ModelBasedMethod, ABC):
             metrics.update(**mets)
 
             self.critic_opt.zero_grad(set_to_none=True)
-            critic_loss.backward()
+            self.accelerator.backward(critic_loss)
             self.critic_opt.step()
 
         # update critic target
@@ -814,7 +814,7 @@ class DreamerV3(ModelBasedMethod, ABC):
                     actor_loss = actor_loss + self.loss_scales["bc"] * bc_loss
 
             self.actor_opt.zero_grad(set_to_none=True)
-            self.actor_scaler.scale(actor_loss).backward()
+            self.accelerator.backward(self.actor_scaler.scale(actor_loss))
             self.actor_scaler.unscale_(self.actor_opt)
             if self.actor_grad_clip:
                 norm = nn.utils.clip_grad_norm_(
@@ -927,7 +927,7 @@ class DreamerV3(ModelBasedMethod, ABC):
                 model_loss = sum(self.loss_scales.get(k) * v for k, v in losses.items())
 
             self.world_model_opt.zero_grad(set_to_none=True)
-            self.world_model_scaler.scale(model_loss).backward()
+            self.accelerator.backward(self.world_model_scaler.scale(model_loss))
             self.world_model_scaler.unscale_(self.world_model_opt)
             if self.world_model_grad_clip:
                 norm = nn.utils.clip_grad_norm_(

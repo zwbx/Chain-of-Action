@@ -111,6 +111,8 @@ class BC(Method):
                 num_training_steps=num_train_steps,
             )
 
+        self.prepare_accelerator()
+
     @property
     def time_obs_size(self) -> int:
         time_obs_spec = extract_from_spec(
@@ -247,7 +249,7 @@ class BC(Method):
 
         # step optimizer
         self.actor_opt.zero_grad(set_to_none=True)
-        actor_loss.backward()
+        self.accelerator.backward(actor_loss)
         if self.actor_grad_clip:
             nn.utils.clip_grad_norm_(self.actor.parameters(), self.actor_grad_clip)
         self.actor_opt.step()
@@ -298,7 +300,7 @@ class BC(Method):
         if loss is None:
             return {}
         self.encoder.zero_grad(set_to_none=True)
-        loss.backward()
+        self.accelerator.backward(loss)
         self.encoder_opt.step()
         return {"encoder_rep_loss": loss.item()}
 
@@ -314,7 +316,7 @@ class BC(Method):
         ), "Use `update_encoder_rep` to only update the encoder parameters."
         self.encoder.zero_grad(set_to_none=True)
         self.view_fusion_opt.zero_grad(set_to_none=True)
-        loss.backward()
+        self.accelerator.backward(loss)
         self.encoder_opt.step()
         self.view_fusion_opt.step()
         return {"view_fusion_rep_loss": loss.item()}

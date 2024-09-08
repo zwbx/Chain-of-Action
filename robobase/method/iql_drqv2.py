@@ -116,7 +116,7 @@ class IQLDrQV2(DrQV2):
 
         # optimize actor
         self.actor_opt.zero_grad(set_to_none=True)
-        actor_loss.backward()
+        self.accelerator.backward(actor_loss)
         if self.actor_grad_clip:
             nn.utils.clip_grad_norm_(self.actor.parameters(), self.actor_grad_clip)
         self.actor_opt.step()
@@ -217,7 +217,7 @@ class IQLDrQV2(DrQV2):
             if self.use_multicam_fusion and self.view_fusion_opt is not None:
                 self.view_fusion_opt.zero_grad(set_to_none=True)
         critic_opt.zero_grad(set_to_none=True)
-        critic_loss.backward()
+        self.accelerator.backward(critic_loss)
         if self.critic_grad_clip:
             nn.utils.clip_grad_norm_(critic.parameters(), self.critic_grad_clip)
         critic_opt.step()

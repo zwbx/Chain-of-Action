@@ -328,7 +328,7 @@ class MaskedWorldModel(DreamerV3):
                 metrics.update(**mae_mets)
             self.mae_scheduler.step()
             self.mae_opt.zero_grad(set_to_none=True)
-            self.mae_scaler.scale(mae_loss).backward()
+            self.accelerator.backward(self.mae_scaler.scale(mae_loss))
             self.mae_scaler.unscale_(self.mae_opt)
             if self.mae_grad_clip:
                 norm = nn.utils.clip_grad_norm_(

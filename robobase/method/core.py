@@ -8,6 +8,7 @@ from gymnasium import spaces
 
 from robobase.intrinsic_reward_module.core import IntrinsicRewardModule
 from robobase.replay_buffer.replay_buffer import ReplayBuffer
+from accelerate import Accelerator
 
 
 BatchedActionSequence = np.ndarray[tuple[int, int, int], np.dtype[np.float32]]
@@ -24,6 +25,7 @@ class Method(nn.Module, ABC):
         replay_alpha: float,
         replay_beta: float,
         frame_stack_on_channel: bool,
+        accelerator: Accelerator,
         intrinsic_reward_module: Optional[IntrinsicRewardModule] = None,
         is_rl: bool = False,
     ):
@@ -40,6 +42,7 @@ class Method(nn.Module, ABC):
         self._eval_env_running = False
         self.logging = False
         self.is_rl = is_rl
+        self.accelerator = accelerator
 
     @property
     def random_explore_action(self) -> torch.Tensor:
@@ -75,6 +78,15 @@ class Method(nn.Module, ABC):
 
     def set_eval_env_running(self, value: bool):
         self._eval_env_running = value
+
+    def prepare_accelerator(self) -> None:
+        for k, v in self.__dict__.items():
+            if isinstance(v, nn.Module):
+                setattr(self, k, self.accelerator.prepare_model(v))
+            elif isinstance(v, torch.optim.Optimizer):
+                setattr(self, k, self.accelerator.prepare_optimizer(v))
+            elif isinstance(v, torch.optim.lr_scheduler.LRScheduler):
+                setattr(self, k, self.accelerator.prepare_scheduler(v))
 
 
 class ImitationLearningMethod(Method, ABC):
