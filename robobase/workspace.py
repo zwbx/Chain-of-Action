@@ -118,16 +118,16 @@ class Workspace:
         print(f"workspace: {self.work_dir}")
 
         # Sanity checks
-        if (
-            cfg.replay_size_before_train * cfg.action_repeat * cfg.action_sequence
-            < cfg.env.episode_length
-            and cfg.replay_size_before_train > 0
-        ):
-            raise ValueError(
-                "replay_size_before_train * action_repeat "
-                f"({cfg.replay_size_before_train} * {cfg.action_repeat}) "
-                f"must be >= episode_length ({cfg.env.episode_length})."
-            )
+        # if (
+        #     cfg.replay_size_before_train * cfg.action_repeat * cfg.action_sequence
+        #     < cfg.env.episode_length
+        #     and cfg.replay_size_before_train > 0
+        # ):
+        #     raise ValueError(
+        #         "replay_size_before_train * action_repeat "
+        #         f"({cfg.replay_size_before_train} * {cfg.action_repeat}) "
+        #         f"must be >= episode_length ({cfg.env.episode_length})."
+        #     )
 
         if cfg.method.is_rl and cfg.action_sequence != 1:
             raise ValueError("Action sequence > 1 is not supported for RL methods")
