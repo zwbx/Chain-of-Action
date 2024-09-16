@@ -35,6 +35,7 @@ core_requirements = [
     "scipy",
     "einops",
     "diffusers",
+    "accelerate",
 ]
 
 setuptools.setup(

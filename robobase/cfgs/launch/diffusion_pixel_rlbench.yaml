@@ -14,7 +14,7 @@ save_snapshot: true
 snapshot_every_n: 0
 
 pixels: true
-frame_stack: 4
+frame_stack: 1
 
 action_repeat: 1
 action_sequence: 20

@@ -1,3 +1,4 @@
+from bigym.const import DEMO_VERSION
 from bigym.bigym_env import BiGymEnv, CONTROL_FREQUENCY_MAX
 from bigym.action_modes import JointPositionActionMode
 from robobase.utils import DemoEnv, add_demo_to_replay_buffer
@@ -27,6 +28,9 @@ from demonstrations.utils import Metadata
 
 from typing import List, Dict, Tuple, Callable
 import copy
+
+from pathlib import Path
+import pickle
 
 UNIT_TEST = False
 
@@ -181,11 +185,18 @@ class BiGymEnvFactory(EnvFactory):
 
     def _get_demo_fn(self, cfg: DictConfig, num_demos: int, mp_list: List) -> None:
         demos = []
+        bigym_class = _task_name_to_env_class(cfg.env.task_name)
+        dump_path = (Path(cfg.env.dataset_root) / "demonstrations" / DEMO_VERSION / bigym_class.__name__ / "demos.pkl")
+        if dump_path.exists():
+            with dump_path.open("rb") as f:
+                demos = pickle.load(f)
+            mp_list.append(demos)
+            return
 
         logging.info("Start to load demos.")
         env = self._create_env(cfg)
 
-        demo_store = DemoStore()
+        demo_store = DemoStore(cache_root=Path(cfg.env.dataset_root))
         if np.isinf(num_demos):
             num_demos = -1
 
@@ -203,6 +214,9 @@ class BiGymEnvFactory(EnvFactory):
 
         env.close()
         logging.info("Finished loading demos.")
+        with dump_path.open("wb") as f:
+            pickle.dump(demos, f, pickle.HIGHEST_PROTOCOL)
+
         mp_list.append(demos)
 
     def collect_or_fetch_demos(self, cfg: DictConfig, num_demos: int):

@@ -6,7 +6,7 @@ env:
   cameras: ["head", "right_wrist", "left_wrist"]
   action_mode: absolute
   floating: true
-  dataset_root: ""
+  dataset_root: /mnt/bn/robotics-data-mx/dataset/bigym
   demo_down_sample_rate: 20
   render_mode: rgb_array
   enable_all_floating_dof: false
