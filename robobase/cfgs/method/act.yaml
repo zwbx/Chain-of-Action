@@ -23,7 +23,7 @@ method:
     # Note: Although the original ACT implementation has 7 for `n_decoder_layers`, there is a bug in the code
     # that means only the first layer is used. Here we match the original implementation by setting this to 1.
     # See this issue https://github.com/tonyzhaozh/act/issues/25#issue-2258740521.
-    dec_layers: 1
+    dec_layers: 7
     dim_feedforward: 3200
     dropout: 0.1
     nheads: 8

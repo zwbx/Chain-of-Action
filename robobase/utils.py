@@ -492,6 +492,10 @@ def observations_to_timesteps(
     # enter loop until skipping more observations goes outside action_space
     while True:
         info = {"demo": 1}
+        if "descriptions" in first_step.misc:
+            descriptions = first_step.misc["descriptions"]
+            desc = descriptions[np.random.randint(len(descriptions))]
+            info.update({"desc": desc})
         # add first observation to demo_timesteps following format defined above
         demo_timesteps = [(first_step, info)]
         i = 0
@@ -517,6 +521,10 @@ def observations_to_timesteps(
                 break
             # add action into info to be extracted later
             info = {"demo_action": action, "demo": 1}
+            if "descriptions" in demo_step.misc:
+                descriptions = demo_step.misc["descriptions"]
+                desc = descriptions[np.random.randint(len(descriptions))]
+                info.update({"desc": desc})
             demo_timesteps.append(
                 (
                     next_demo_step,
@@ -585,7 +593,7 @@ def add_demo_to_replay_buffer(wrapped_env: DemoEnv, replay_buffer: ReplayBuffer)
     final_obs, _ = obs, info
 
     for obs, action, rew, term, trunc, info, _ in ep:
-        replay_buffer.add(obs, action, rew, term, trunc, demo=info["demo"])
+        replay_buffer.add(obs, action, rew, term, trunc, **info)
 
     if not is_sequential:
         replay_buffer.add_final(final_obs)

@@ -18,6 +18,7 @@ from robobase.envs.wrappers.reward_modifiers import (
     ScaleReward,
     ShapeRewards,
 )
+from robobase.envs.wrappers.lang_wrapper import LangWrapper
 
 __all__ = [
     "ConcatDim",
@@ -34,4 +35,5 @@ __all__ = [
     "ActionSequence",
     "AppendDemoInfo",
     "RecedingHorizonControl",
+    "LangWrapper",
 ]

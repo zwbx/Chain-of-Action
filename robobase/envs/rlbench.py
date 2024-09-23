@@ -23,6 +23,7 @@ from robobase.envs.wrappers import (
     ActionSequence,
     RecedingHorizonControl,
     AppendDemoInfo,
+    LangWrapper,
 )
 from robobase.utils import (
     DemoStep,
@@ -46,6 +47,7 @@ try:
     from rlbench.action_modes.action_mode import ActionMode
     from rlbench.backend.observation import Observation
     from rlbench.backend.exceptions import InvalidActionError
+    from rlbench.utils import get_stored_demos
 except (ModuleNotFoundError, ImportError) as e:
     print("You need to install RLBench: 'https://github.com/stepjam/RLBench'")
     raise e
@@ -411,10 +413,10 @@ class RLBenchEnv(gym.Env):
         super().reset(seed=seed)
         if self._rlbench_env is None:
             self._launch()
-        _, rlb_obs = self._task.reset()
+        desc, rlb_obs = self._task.reset()
 
         obs = _extract_obs(rlb_obs, self._observation_config, robot_state_keys)
-        return obs, {"demo": 0}
+        return obs, {"demo": 0, "desc": desc}
 
     def close(self):
         if self._rlbench_env is not None:
@@ -458,7 +460,18 @@ class RLBenchEnv(gym.Env):
                 "dataset_root was not defined. Generating live demos. "
                 "This may take a while..."
             )
-        raw_demos = self._task.get_demos(num_demos, live_demos=live_demos)
+            raw_demos = self._task.get_demos(num_demos, live_demos=live_demos)
+        else:
+            raw_demos = get_stored_demos(
+                num_demos,
+                False,
+                self._dataset_root,
+                -1,
+                self._task_name,
+                self._observation_config,
+                False,
+                0,
+            )
 
         if self._action_mode_type == ActionModeType.END_EFFECTOR_POSE:
             raw_demos = self.get_nbp_demos(raw_demos)
@@ -679,6 +692,7 @@ class RLBenchEnvFactory(EnvFactory):
                 )
 
         env = AppendDemoInfo(env)
+        env = LangWrapper(env)
         if return_raw_spaces:
             return env, (action_space, observation_space)
         else:

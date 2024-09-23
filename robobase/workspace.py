@@ -45,6 +45,10 @@ def _create_default_replay_buffer(
     extra_replay_elements = spaces.Dict({})
     if cfg.demos > 0:
         extra_replay_elements["demo"] = spaces.Box(0, 1, shape=(), dtype=np.uint8)
+    if cfg.env.env_name == "rlbench":
+        extra_replay_elements["desc"] = spaces.Box(
+            0, np.infty, shape=(77,), dtype=np.int64
+        )
     # Create replay_class with buffer-specific hyperparameters
     replay_class = UniformReplayBuffer
     if cfg.replay.prioritization:

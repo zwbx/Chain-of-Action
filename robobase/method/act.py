@@ -20,6 +20,7 @@ from robobase.method.utils import (
     extract_many_from_batch,
 )
 from robobase.models.act.backbone import build_backbone, build_film_backbone
+import clip
 
 
 class ImageEncoderACT(RoboBaseModule):
@@ -65,22 +66,14 @@ class ImageEncoderACT(RoboBaseModule):
         self._output_shape = None  # Will get calculated the first time output_shape
         # property gets called.
 
-        self.use_lang_cond = use_lang_cond
-        if self.use_lang_cond:
-            self.backbone = build_film_backbone(
-                hidden_dim=hidden_dim,
-                position_embedding=position_embedding,
-                backbone=backbone,
-            )
-        else:
-            self.backbone = build_backbone(
-                hidden_dim=hidden_dim,
-                position_embedding=position_embedding,
-                lr_backbone=lr_backbone,
-                masks=masks,
-                backbone=backbone,
-                dilation=dilation,
-            )
+        self.backbone = build_backbone(
+            hidden_dim=hidden_dim,
+            position_embedding=position_embedding,
+            lr_backbone=lr_backbone,
+            masks=masks,
+            backbone=backbone,
+            dilation=dilation,
+        )
 
         for param in self.backbone.parameters():
             param.requires_grad = True
@@ -88,9 +81,6 @@ class ImageEncoderACT(RoboBaseModule):
         self.input_proj = nn.Conv2d(
             self.backbone.num_channels, hidden_dim, kernel_size=1
         )
-
-        if self.use_lang_cond:
-            self.proj_text_emb = nn.Linear(self.backbone.num_channels, hidden_dim)
 
     @property
     def output_shape(
@@ -103,20 +93,9 @@ class ImageEncoderACT(RoboBaseModule):
                 next(self.backbone.parameters()).device
             )
             task_emb = None
-            if self.use_lang_cond:
-                task_emb = torch.randn((bs, self.backbone.num_channels)).to(
-                    next(self.backbone.parameters()).device
-                )
             with torch.no_grad():
                 feat, pos, task_emb = self.forward(x, task_emb=task_emb)
-                if self.use_lang_cond:
-                    self._output_shape = (
-                        feat[0].shape,
-                        pos[0].shape,
-                        task_emb[0].shape,
-                    )
-                else:
-                    self._output_shape = (feat[0].shape, pos[0].shape, None)
+                self._output_shape = (feat[0].shape, pos[0].shape, None)
 
         return self._output_shape
 
@@ -126,8 +105,6 @@ class ImageEncoderACT(RoboBaseModule):
         assert (
             self._input_shape == x.shape[1:]
         ), f"expected input shape {self._input_shape} but got {x.shape[1:]}"
-        if self.use_lang_cond:
-            task_emb = self.proj_text_emb(task_emb)
 
         all_cam_features = []
         all_cam_pos = []
@@ -137,10 +114,7 @@ class ImageEncoderACT(RoboBaseModule):
             cur_x = x[:, cam_id].reshape(-1, 3, *self._input_shape[2:])
 
             # feat: (b*fs, c, h, w) -> (b*fs, feat_dim, 3, 3)
-            if self.use_lang_cond:
-                feat, pos = self.backbone(cur_x, task_emb=task_emb)
-            else:
-                feat, pos = self.backbone(cur_x)
+            feat, pos = self.backbone(cur_x)
 
             # feat: (b*fs, feat_dim, 3, 3) -> (b*fs, hidden_dim, 3, 3)
             feat = self.input_proj(feat[0])
@@ -294,7 +268,10 @@ class ActBCAgent(BC):
         """
         self.lr_backbone = lr_backbone
         self.weight_decay = weight_decay
+        self.use_lang_cond = use_lang_cond
         super().__init__(*args, **kwargs)
+        if self.use_lang_cond:
+            self.build_lang_encoder()
 
         # sanity check
         assert self.frame_stack_on_channel, "frame_stack_on_channel must be enabled"
@@ -337,6 +314,12 @@ class ActBCAgent(BC):
         self.actor_opt = torch.optim.AdamW(
             param_dicts, lr=self.lr, weight_decay=self.weight_decay
         )
+
+    def build_lang_encoder(self):
+        lang_encoder, _ = clip.load("ViT-B/32", device=self.device)
+        for _, param in lang_encoder.named_parameters():
+            param.requires_grad = False
+        self.lang_encoder = lang_encoder
 
     def train(self, training=True):
         self.training = training
@@ -403,11 +386,10 @@ class ActBCAgent(BC):
         image = rgb.float().detach()
 
         task_emb = None
-        # if self.actor.encoder_model.use_lang_cond:
-        #     lang_tokens = flatten_time_dim_into_channel_dim(
-        #         extract_from_spec(batch, "lang_tokens")
-        #     )
-        #     task_emb, _ = self.encode_clip_text(lang_tokens)
+        if self.use_lang_cond:
+            lang_tokens = extract_from_batch(batch, "desc").long()
+            with torch.no_grad():
+                task_emb = self.lang_encoder.encode_text(lang_tokens)
 
         # If action contains all zeros, it is padded.
         is_pad = actions.sum(axis=-1) == 0

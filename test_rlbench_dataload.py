@@ -5,6 +5,7 @@ import os
 import pickle
 import argparse
 
+
 def cam_config():
     return CameraConfig()
 
@@ -31,6 +32,7 @@ def get_demo(dataset_root, task_name, variation_number):
         obs_config=obs_config,
     )
 
+
 def save_as_pickles(root, target_root, task_name):
     dataset_types = ["train", "eval"]
 
@@ -38,17 +40,21 @@ def save_as_pickles(root, target_root, task_name):
         cur_root, save_root = os.path.join(root, dt), os.path.join(target_root, dt)
         task_data_root = os.path.join(cur_root, task_name)
         variations = os.listdir(task_data_root)
-        variations = [
-            int(f.strip("variation")) for f in variations
-        ]
+        variations = [int(f.strip("variation")) for f in variations]
 
         for v in variations:
             demos = get_demo(cur_root, task_name, v)
             variation_id = demos[0][0].misc["variation_index"]
-            os.makedirs(os.path.join(save_root, task_name, f"variation_{variation_id}"), exist_ok=True)
+            os.makedirs(
+                os.path.join(save_root, task_name, f"variation_{variation_id}"),
+                exist_ok=True,
+            )
             for i, demo in enumerate(demos):
                 _path = os.path.join(
-                    save_root, task_name, f"variation_{variation_id}", f"episode_{i}.pkl"
+                    save_root,
+                    task_name,
+                    f"variation_{variation_id}",
+                    f"episode_{i}.pkl",
                 )
                 with open(_path, "wb") as fout:
                     pickle.dump(demo, fout, pickle.HIGHEST_PROTOCOL)

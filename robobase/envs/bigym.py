@@ -186,7 +186,13 @@ class BiGymEnvFactory(EnvFactory):
     def _get_demo_fn(self, cfg: DictConfig, num_demos: int, mp_list: List) -> None:
         demos = []
         bigym_class = _task_name_to_env_class(cfg.env.task_name)
-        dump_path = (Path(cfg.env.dataset_root) / "demonstrations" / DEMO_VERSION / bigym_class.__name__ / "demos.pkl")
+        dump_path = (
+            Path(cfg.env.dataset_root)
+            / "demonstrations"
+            / DEMO_VERSION
+            / bigym_class.__name__
+            / "demos.pkl"
+        )
         if dump_path.exists():
             with dump_path.open("rb") as f:
                 demos = pickle.load(f)

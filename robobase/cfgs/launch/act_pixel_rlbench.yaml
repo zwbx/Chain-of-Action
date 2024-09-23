@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - ../env: rlbench/take_lid_off_saucepan
+  - ../env: null
   - ../method: act
 
 demos: 50
@@ -12,6 +12,9 @@ num_eval_episodes: 1
 batch_size: 256
 save_snapshot: true
 snapshot_every_n: 0
+
+method:
+  use_lang_cond: true
 
 pixels: true
 frame_stack: 1
