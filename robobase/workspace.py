@@ -348,7 +348,7 @@ class Workspace:
                     action,
                     (next_observation, reward, termination, truncation, next_info),
                     env_metrics,
-                ) = self._perform_env_steps(observation, self.eval_env, True)
+                ) = self._perform_env_steps(observation, info, self.eval_env, True)
                 observation = next_observation
                 info = next_info
                 metrics.update(env_metrics)
@@ -527,7 +527,11 @@ class Workspace:
         return metrics
 
     def _perform_env_steps(
-        self, observations: dict[str, np.ndarray], env: gym.Env, eval_mode: bool
+        self,
+        observations: dict[str, np.ndarray],
+        info: dict[str, np.ndarray],
+        env: gym.Env,
+        eval_mode: bool,
     ) -> tuple[np.ndarray, tuple, dict[str, Any]]:
         if self.agent.logging:
             start_time = time.time()
@@ -535,6 +539,10 @@ class Workspace:
             torch_observations = {
                 k: torch.from_numpy(v).to(self.device) for k, v in observations.items()
             }
+            if "desc" in info:
+                torch_observations["desc"] = torch.from_numpy(info["desc"]).to(
+                    self.device
+                )
             if eval_mode:
                 torch_observations = {
                     k: v.unsqueeze(0) for k, v in torch_observations.items()
@@ -640,7 +648,7 @@ class Workspace:
                 action,
                 (next_observations, rewards, terminations, truncations, next_info),
                 env_metrics,
-            ) = self._perform_env_steps(observations, self.train_envs, False)
+            ) = self._perform_env_steps(observations, info, self.train_envs, False)
 
             agent_0_reward += rewards[0]
             agent_0_ep_len += 1

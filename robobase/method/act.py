@@ -341,7 +341,12 @@ class ActBCAgent(BC):
 
             image = rgb.float().detach()
 
-        action = self.actor(qpos, image)
+        if self.use_lang_cond:
+            lang_tokens = extract_from_batch(obs, "desc").long()
+            with torch.no_grad():
+                task_emb = self.lang_encoder.encode_text(lang_tokens)
+
+        action = self.actor(qpos, image, task_emb=task_emb)
 
         return action
 

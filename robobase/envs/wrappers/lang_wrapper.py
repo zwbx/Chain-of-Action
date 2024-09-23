@@ -2,8 +2,6 @@
 import gymnasium as gym
 import numpy as np
 import clip
-import logging
-from gymnasium.spaces import Box
 
 
 class LangWrapper(gym.Wrapper, gym.utils.RecordConstructorArgs):
@@ -20,7 +18,7 @@ class LangWrapper(gym.Wrapper, gym.utils.RecordConstructorArgs):
         self.is_vector_env = getattr(env, "is_vector_env", False)
         self.tokenizer = clip.tokenize
         self.desc = None
-    
+
     def reset(self, *args, **kwargs):
         """See base."""
         _env = self.env.unwrapped
@@ -30,7 +28,7 @@ class LangWrapper(gym.Wrapper, gym.utils.RecordConstructorArgs):
         desc = info.pop("desc")
         desc = desc[np.random.randint(len(desc))]
         self.desc = self.tokenizer(desc).numpy()[0]
-        
+
         return obs, {**info, "desc": self.desc}
 
     def step(self, action):
