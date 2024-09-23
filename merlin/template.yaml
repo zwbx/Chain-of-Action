@@ -1,0 +1,69 @@
+jobType: Train
+resourceGroupNames: []
+jobDefName: job
+jobDefVersionNum: 2
+caption: robobase_template
+jobRunParams:
+  entrypointFullScript: |-
+    sudo chmod -R 777 /home/tiger/.cache
+    pip3 install -e /opt/tiger/robobase
+    xvfb-run -a python3 train.py launch=%LAUNCH env=%ENV wandb.use=True env.dataset_root=%DS_ROOT
+
+  resource:
+    backend: ARNOLD
+    arnoldConfig:
+      elasticTraining:
+        isOpen: false
+      useRobustTraining: false
+      roles:
+        - name: worker
+          num: 1
+          ports: 0
+          gpuv: TESLA_V100_SXM2_32GB
+          gpu: 1
+          cpu: 11
+          memory: 45056
+      preemptible: false
+      useTenantQuota: false
+      batchServer: false
+      enableRayOnArnold: false
+      maskHosts: []
+      queueTimeoutReminder: 0
+      reminderInterval: 0
+      keepMins: 0
+      retryTimes: 3
+      profiler: ''
+      ckptTrialId: 0
+      bytedriveVolumes: []
+      bytenasVolumes:
+        - accessMode: RO
+          name: robotics-real-data
+          roles: []
+        - accessMode: RO
+          name: robotics-lq2024-data
+          roles: []
+        - accessMode: RO
+          name: robotics-data-hl
+          roles: []
+        - accessMode: RO
+          name: robotics-lq2024
+          roles: []
+        - accessMode: RO
+          name: robotics-data-wht
+          roles: []
+        - accessMode: RO
+          name: robotics
+          roles: []
+        - accessMode: RO
+          name: robotics-data-lxh-lq
+          roles: []
+        - accessMode: RW
+          name: robotics-data-mx
+          roles: []
+      hdfsVolumes: []
+      groupIds:
+        - 538
+      clusterId: 17
+      quotaPool: default
+namespace: /topic/095fd51616305d62
+tags: []

@@ -36,6 +36,7 @@ core_requirements = [
     "einops",
     "diffusers",
     "accelerate",
+    "clip @ git+https://github.com/openai/CLIP.git",
 ]
 
 setuptools.setup(
