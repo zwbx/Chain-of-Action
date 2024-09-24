@@ -26,7 +26,6 @@ core_requirements = [
     "omegaconf",
     "hydra-core",
     "hydra-joblib-launcher",
-    "gymnasium @ git+https://git@github.com/stepjam/Gymnasium.git@0.29.2",
     "termcolor",
     "opencv-python-headless",
     "numpy<2",
