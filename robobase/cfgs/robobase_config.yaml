@@ -81,7 +81,7 @@ save_csv: false
 
 hydra:
   run:
-    dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
+    dir: /mnt/bn/robotics-data-mx/robobase/exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
   sweep:
-    dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M}_${hydra.job.override_dirname}
+    dir: /mnt/bn/robotics-data-mx/robobase/exp_local/${now:%Y.%m.%d}/${now:%H%M}_${hydra.job.override_dirname}
     subdir: ${hydra.job.num}
