@@ -323,17 +323,19 @@ class Workspace:
 
         if self.cfg.save_snapshot:
             self.save_snapshot()
-
+        
+        self._eval(False, 100)
         self.shutdown()
 
     def eval(self) -> dict[str, Any]:
         return self._eval(eval_record_all_episode=True)
 
-    def _eval(self, eval_record_all_episode: bool = False) -> dict[str, Any]:
+    def _eval(self, eval_record_all_episode: bool = False, eval_episodes: int = None) -> dict[str, Any]:
         # TODO: In future, this func could do with a further refactor
         self.agent.set_eval_env_running(True)
         step, episode, total_reward, successes = 0, 0, 0, 0
-        eval_until_episode = utils.Until(self.cfg.num_eval_episodes)
+        eval_episodes = self.cfg.num_eval_episodes if eval_episodes is None else eval_episodes
+        eval_until_episode = utils.Until(eval_episodes)
         first_rollout = []
         metrics = {}
         while eval_until_episode(episode):
