@@ -35,4 +35,4 @@ replay:
 
 hydra:
   run:
-    dir: ./exp_local/pixel_act/rlbench_${env.task_name}_${now:%Y%m%d%H%M%S}
+    dir: ${exp_root}/exp_local/pixel_act/rlbench_${env.task_name}_${now:%Y%m%d%H%M%S}

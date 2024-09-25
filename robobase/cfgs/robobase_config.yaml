@@ -79,9 +79,11 @@ log_eval_video: true
 log_pretrain_every: 100
 save_csv: false
 
+exp_root: /mnt/bn/robotics-data-mx/robobase_logs/
+
 hydra:
   run:
-    dir: /mnt/bn/robotics-data-mx/robobase/exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
+    dir: ${exp_root}/exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
   sweep:
-    dir: /mnt/bn/robotics-data-mx/robobase/exp_local/${now:%Y.%m.%d}/${now:%H%M}_${hydra.job.override_dirname}
+    dir: ${exp_root}/exp_local/${now:%Y.%m.%d}/${now:%H%M}_${hydra.job.override_dirname}
     subdir: ${hydra.job.num}
