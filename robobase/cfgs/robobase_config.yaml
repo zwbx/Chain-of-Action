@@ -63,6 +63,7 @@ wandb:  # weight and bias
   use: false
   project: RoboBase
   name: null
+  save_dir: ${exp_root}
 
 tb:  # TensorBoard
   use: false

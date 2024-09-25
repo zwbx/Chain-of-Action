@@ -3,12 +3,13 @@
 defaults:
   - ../env: null
   - ../method: act
+  - override ../env: rlbench/episode_length/act
 
 demos: 50
 num_pretrain_steps: 500000
 num_train_frames: 0
 eval_every_steps: 2000
-num_eval_episodes: 1
+num_eval_episodes: 5
 batch_size: 256
 save_snapshot: true
 snapshot_every_n: 0

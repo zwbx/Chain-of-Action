@@ -176,6 +176,7 @@ class Logger(object):
                 project=cfg.wandb.project,
                 name=cfg.wandb.name,
                 config=cfg_dict,
+                dir=cfg.wandb.save_dir,
             )
         elif self._use_tb:
             try:
