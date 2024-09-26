@@ -3,7 +3,7 @@
 defaults:
   - ../method: cqn
   - ../env: null
-  - override ../env: rlbench/episode_length/cqn
+  - override ../env: rlbench/episode_length/act
 
 pixels: true
 visual_observation_shape: [84, 84]
