@@ -9,8 +9,9 @@ import yaml
 def check_ep(ep):
     with (ep / LOW_DIM_PICKLE).open("rb") as fin:
         obs = pickle.load(fin)
-    
+
     return len(obs)
+
 
 def check_task(root, tag, task_name, ret):
     root = Path(root) / tag / task_name
@@ -22,8 +23,9 @@ def check_task(root, tag, task_name, ret):
             for ep in ep_dir.iterdir():
                 if ep.is_dir():
                     ep_lengths.append(check_ep(ep))
-    
+
     ret[task_name] = ep_lengths
+
 
 rlbench_tasks = [
     "basketball_in_hoop",
@@ -84,7 +86,8 @@ rlbench_tasks = [
     "put_bottle_in_fridge",
     "put_groceries_in_cupboard",
     "put_item_in_drawer",
-    "put_knife_in_knife_block", "put_knife_on_chopping_board",
+    "put_knife_in_knife_block",
+    "put_knife_on_chopping_board",
     "put_money_in_safe",
     "put_plate_in_colored_dish_rack",
     "put_rubbish_in_bin",
@@ -140,7 +143,15 @@ wrong_eps = manager.dict()
 for task in rlbench_tasks:
     for mode in ["train", "eval"]:
         procs.append(
-            mp.Process(target=check_task, args=("/mnt/bn/robotics-data-mx/rlbench_datasets/all_variations/", mode, task, wrong_eps))
+            mp.Process(
+                target=check_task,
+                args=(
+                    "/mnt/bn/robotics-data-mx/rlbench_datasets/all_variations/",
+                    mode,
+                    task,
+                    wrong_eps,
+                ),
+            )
         )
 
 [p.start() for p in procs]

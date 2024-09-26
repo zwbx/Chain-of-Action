@@ -2,13 +2,14 @@
 
 defaults:
   - ../method: cqn
-  - ../env: rlbench/take_lid_off_saucepan
+  - ../env: null
   - override ../env: rlbench/episode_length/cqn
 
 pixels: true
 visual_observation_shape: [84, 84]
 frame_stack: 8
 action_repeat: 1
+num_train_envs: 4
 
 env:
   arm_max_velocity: 2.0
@@ -70,3 +71,6 @@ method:
 hydra:
   run:
     dir: ./exp_local/pixel_cqn/rlbench_${env.task_name}_${now:%Y%m%d%H%M%S}
+
+wandb:
+  project: RoboBaseCQN

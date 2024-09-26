@@ -31,6 +31,7 @@ class C2FCritic(nn.Module):
         v_max: float,
         advantage_model: FullyConnectedModule,
         value_model: Optional[FullyConnectedModule] = None,
+        **kwargs,
     ):
         super().__init__()
         self.adv = advantage_model
@@ -304,6 +305,7 @@ class CQN(ValueBased):
         v_max: float,
         critic_lambda: float,
         centralized_critic: bool,
+        use_lang_cond: bool = False,
         *args,
         **kwargs,
     ):

@@ -471,6 +471,7 @@ def observations_to_timesteps(
     obs_to_act_func: Callable[
         [DemoStep, DemoStep, Box], np.ndarray
     ] = observations_to_action_with_onehot_gripper,
+    use_lang_cond: bool = False,
 ):
     """Converts demo steps into timesteps.
 
@@ -492,7 +493,7 @@ def observations_to_timesteps(
     # enter loop until skipping more observations goes outside action_space
     while True:
         info = {"demo": 1}
-        if "descriptions" in first_step.misc:
+        if "descriptions" in first_step.misc and use_lang_cond:
             descriptions = first_step.misc["descriptions"]
             desc = descriptions[np.random.randint(len(descriptions))]
             info.update({"desc": desc})
@@ -521,7 +522,7 @@ def observations_to_timesteps(
                 break
             # add action into info to be extracted later
             info = {"demo_action": action, "demo": 1}
-            if "descriptions" in demo_step.misc:
+            if "descriptions" in demo_step.misc and use_lang_cond:
                 descriptions = demo_step.misc["descriptions"]
                 desc = descriptions[np.random.randint(len(descriptions))]
                 info.update({"desc": desc})

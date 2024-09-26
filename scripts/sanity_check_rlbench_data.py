@@ -35,6 +35,7 @@ def check_ep(ep):
     clean = [len(obs) == l for l in len_dirs]
     return all(clean), len(obs)
 
+
 def check_task(root, tag, task_name, ret):
     root = Path(root) / tag / task_name
     wrong_eps = []
@@ -46,7 +47,7 @@ def check_task(root, tag, task_name, ret):
                 for ep in (variation / "episodes").iterdir():
                     wrong_eps.append(ep)
                 continue
-            
+
             ep_dir = variation / "episodes"
             for ep in ep_dir.iterdir():
                 if ep.is_dir():
@@ -56,10 +57,9 @@ def check_task(root, tag, task_name, ret):
                         wrong_eps.append(ep)
                     else:
                         ep_lengths.append(ep_len)
-    
-    ret.append(
-        {task_name: (wrong_eps, max(ep_lengths))}
-    )
+
+    ret.append({task_name: (wrong_eps, max(ep_lengths))})
+
 
 rlbench_tasks = [
     "basketball_in_hoop",
@@ -120,7 +120,8 @@ rlbench_tasks = [
     "put_bottle_in_fridge",
     "put_groceries_in_cupboard",
     "put_item_in_drawer",
-    "put_knife_in_knife_block", "put_knife_on_chopping_board",
+    "put_knife_in_knife_block",
+    "put_knife_on_chopping_board",
     "put_money_in_safe",
     "put_plate_in_colored_dish_rack",
     "put_rubbish_in_bin",
@@ -177,7 +178,15 @@ wrong_eps = manager.list()
 for task in tqdm.tqdm(rlbench_tasks):
     for mode in ["train", "eval"]:
         procs.append(
-            mp.Process(target=check_task, args=("/mnt/bn/robotics-data-mx/rlbench_datasets/all_variations/", mode, task, wrong_eps))
+            mp.Process(
+                target=check_task,
+                args=(
+                    "/mnt/bn/robotics-data-mx/rlbench_datasets/all_variations/",
+                    mode,
+                    task,
+                    wrong_eps,
+                ),
+            )
         )
 
 [p.start() for p in procs]

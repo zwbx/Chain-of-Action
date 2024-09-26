@@ -27,6 +27,7 @@ method:
   atoms: 51    # Worth trying 101
   critic_lambda: 1.0
   centralized_critic: false
+  use_lang_cond: false
 
   advantage_model:
     _target_: robobase.models.MLPWithBottleneckFeatures

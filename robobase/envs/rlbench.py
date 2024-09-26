@@ -330,6 +330,7 @@ class RLBenchEnv(gym.Env):
         renderer: str = "opengl",
         headless: bool = True,
         render_mode: str = None,
+        use_lang_cond: bool = False,
     ):
         self._task_name = task_name
         self._observation_config = observation_config
@@ -339,6 +340,7 @@ class RLBenchEnv(gym.Env):
         self._arm_max_acceleration = arm_max_acceleration
         self._dataset_root = dataset_root
         self._headless = headless
+        self._use_lang_cond = use_lang_cond
         self._rlbench_env = None
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
@@ -416,7 +418,10 @@ class RLBenchEnv(gym.Env):
         desc, rlb_obs = self._task.reset()
 
         obs = _extract_obs(rlb_obs, self._observation_config, robot_state_keys)
-        return obs, {"demo": 0, "desc": desc}
+        info = {"demo": 0}
+        if self._use_lang_cond:
+            info["desc"] = desc
+        return obs, info
 
     def close(self):
         if self._rlbench_env is not None:
@@ -502,7 +507,11 @@ class RLBenchEnv(gym.Env):
         loaded_demos = []
         for demo in demos_to_load:
             loaded_demos += observations_to_timesteps(
-                demo, self.action_space, skipping=False, obs_to_act_func=action_func
+                demo,
+                self.action_space,
+                skipping=False,
+                obs_to_act_func=action_func,
+                use_lang_cond=self._use_lang_cond,
             )
         return loaded_demos
 
@@ -601,6 +610,7 @@ def _make_env(cfg: DictConfig, obs_config: dict):
         arm_max_acceleration=cfg.env.arm_max_acceleration,
         dataset_root=cfg.env.dataset_root,
         render_mode="rgb_array",
+        use_lang_cond=cfg.method.get("use_lang_cond", False),
     )
 
 
@@ -692,7 +702,8 @@ class RLBenchEnvFactory(EnvFactory):
                 )
 
         env = AppendDemoInfo(env)
-        env = LangWrapper(env)
+        if cfg.method.use_lang_cond:
+            env = LangWrapper(env)
         if return_raw_spaces:
             return env, (action_space, observation_space)
         else:

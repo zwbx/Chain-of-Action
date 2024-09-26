@@ -45,7 +45,7 @@ def _create_default_replay_buffer(
     extra_replay_elements = spaces.Dict({})
     if cfg.demos > 0:
         extra_replay_elements["demo"] = spaces.Box(0, 1, shape=(), dtype=np.uint8)
-    if cfg.env.env_name == "rlbench":
+    if cfg.env.env_name == "rlbench" and cfg.method.use_lang_cond:
         extra_replay_elements["desc"] = spaces.Box(
             0, np.infty, shape=(77,), dtype=np.int64
         )
@@ -227,6 +227,9 @@ class Workspace:
                 pin_memory=cfg.replay.pin_memory,
                 worker_init_fn=_worker_init_fn,
             )
+            self.demo_replay_loader = self.accelerator.prepare_data_loader(
+                self.demo_replay_loader
+            )
 
         if self.prioritized_replay:
             if self.use_demo_replay:
@@ -323,18 +326,22 @@ class Workspace:
 
         if self.cfg.save_snapshot:
             self.save_snapshot()
-        
+
         self._eval(False, 100)
         self.shutdown()
 
     def eval(self) -> dict[str, Any]:
         return self._eval(eval_record_all_episode=True)
 
-    def _eval(self, eval_record_all_episode: bool = False, eval_episodes: int = None) -> dict[str, Any]:
+    def _eval(
+        self, eval_record_all_episode: bool = False, eval_episodes: int = None
+    ) -> dict[str, Any]:
         # TODO: In future, this func could do with a further refactor
         self.agent.set_eval_env_running(True)
         step, episode, total_reward, successes = 0, 0, 0, 0
-        eval_episodes = self.cfg.num_eval_episodes if eval_episodes is None else eval_episodes
+        eval_episodes = (
+            self.cfg.num_eval_episodes if eval_episodes is None else eval_episodes
+        )
         eval_until_episode = utils.Until(eval_episodes)
         first_rollout = []
         metrics = {}
