@@ -36,6 +36,7 @@ core_requirements = [
     "diffusers",
     "accelerate",
     "clip @ git+https://github.com/openai/CLIP.git",
+    "gymnasium @ git+https://git@github.com/stepjam/Gymnasium.git@0.29.2",
 ]
 
 setuptools.setup(
@@ -54,7 +55,7 @@ setuptools.setup(
             "dm_control",
         ],
         "rlbench": [
-            "rlbench @ git+https://git@github.com/stepjam/RLBench.git@b80e51feb3694d9959cb8c0408cd385001b01382",
+            "rlbench @ git+https://github.com/Yusufma03/RLBench.git",
         ],
         "bigym": [
             "bigym @ git+https://github.com/Yusufma03/bigym.git",
