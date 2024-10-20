@@ -1,7 +1,10 @@
 # Byte-compiled / optimized / DLL files
+data_raw/
+data_raw_bak/
+build/
 __pycache__/
 *.py[cod]
-
+*.out
 # C extensions
 *.so
 
