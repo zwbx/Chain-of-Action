@@ -5,6 +5,7 @@ import random
 from typing import Callable, Any
 from functools import partial
 import logging
+import pickle
 
 from gymnasium import spaces
 from omegaconf import DictConfig
@@ -345,8 +346,27 @@ class Workspace:
         eval_until_episode = utils.Until(eval_episodes)
         first_rollout = []
         metrics = {}
+        # pkl_list = []
+        # ### set off-line test data
+        # task_name = self.eval_env.unwrapped._task_name
+        # import os 
+        # from natsort import natsorted
+        # # for root, dirs, files in os.walk('/home/zha414/fire/manipulation/rlbench_data_test'):
+        # for root, dirs, files in os.walk('/home/zha414/fire/manipulation/robobase_accelerate/data_raw/'):
+        #     for file in files:
+        #         if file == 'low_dim_obs.pkl' and task_name in root:
+        #             # Do something with the file
+        #             pkl_list.append(root)
+        # pkl_list = natsorted(pkl_list)
+        ###
         while eval_until_episode(episode):
             observation, info = self.eval_env.reset()
+            # ###
+            # with open(os.path.join(pkl_list[episode],'low_dim_obs.pkl'), 'rb') as f:
+            #     pkl = pickle.load(f)
+            # observation, info = self.eval_env.reset_to_demo(pkl)
+            # for k, v in observation.items():
+            #     observation[k] = v[None]
             # eval agent always has last id (ids start from 0)
             self.agent.reset(self.main_loop_iterations, [self.train_envs.num_envs])
             enabled = eval_record_all_episode or episode == 0
@@ -597,7 +617,7 @@ class Workspace:
 
     def _pretrain_on_demos(self):
         if self.cfg.num_pretrain_steps > 0:
-            pre_train_until_step = utils.Until(self.cfg.num_pretrain_steps)
+            pre_train_until_step = utils.Until(self.cfg.num_pretrain_steps+1)
             should_pretrain_log = utils.Every(self.cfg.log_pretrain_every)
             should_pretrain_eval = utils.Every(self.cfg.eval_every_steps)
             if self.cfg.log_pretrain_every > 0:
