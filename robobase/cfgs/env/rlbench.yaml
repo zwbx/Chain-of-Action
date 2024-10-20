@@ -8,8 +8,11 @@ visual_observation_shape: [128, 128]
 env:
   env_name: rlbench
   episode_length: ???
-  dataset_root: ''
+  # dataset_root: ''
+  dataset_root: /home/zha414/fire/manipulation/robobase_accelerate/data_raw
   action_mode: JOINT_POSITION
+  # END_EFFECTOR_POSE
+  # JOINT_POSITION
   cameras: ["front", "wrist", "left_shoulder", "right_shoulder"]
   renderer: opengl3
   arm_max_velocity: 1.0
