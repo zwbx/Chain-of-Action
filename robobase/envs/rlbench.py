@@ -229,6 +229,19 @@ def _convert_rlbench_demos_for_loading(
     return converted_demos
 
 
+def _is_stopped(demo, i, obs, stopped_buffer, delta=0.1):
+    next_is_not_final = i == (len(demo) - 2)
+    gripper_state_no_change = (
+            i < (len(demo) - 2) and
+            (obs.gripper_open == demo[i + 1].gripper_open and
+             obs.gripper_open == demo[i - 1].gripper_open and
+             demo[i - 2].gripper_open == demo[i - 1].gripper_open))
+    small_delta = np.allclose(obs.joint_velocities, 0, atol=delta)
+    stopped = (stopped_buffer <= 0 and small_delta and
+               (not next_is_not_final) and gripper_state_no_change)
+    return stopped
+
+
 def keypoint_discovery(
     demo: Demo, stopping_delta: float = 0.1, method: str = "heuristic"
 ) -> list[int]:
@@ -249,52 +262,69 @@ def keypoint_discovery(
     """
     episode_keypoints = []
 
-    if method == "heuristic":
-        # Gripper open is the first low_dim_state index.
-        prev_gripper_open = demo[0][0]["low_dim_state"][0]
+    # if method == "heuristic":
+        # # Gripper open is the first low_dim_state index.
+        # prev_gripper_open = demo[0].task_low_dim_state[0]
+        # stopped_buffer = 0
+        # for i, data in enumerate(demo):
+        #     # Data is a tuple
+        #     # First index is (obs, info)
+        #     # Other indices are (obs, reward, termination, truncation, info, action)
+        #     state = data.task_low_dim_state
+
+        #     # Check if the current time step is not the second-to-last step in the
+        #     # demonstration
+        #     next_is_not_final = i == (len(demo) - 2)
+        #     # Check if the gripper state hasn't changed for the past two time steps
+        #     # and one time step ahead
+        #     # NOTE: Is using np.all_close safer?
+        #     gripper_state_no_change = i < (len(demo) - 2) and (
+        #         demo[i + 1][0]["low_dim_state"][0]
+        #         == state[0]
+        #         == demo[i - 1][0]["low_dim_state"][0]
+        #         == demo[i - 2][0]["low_dim_state"][0]
+        #     )
+        #     # Check if all joint velocities are close to zero within the given tolerance
+        #     small_delta = np.allclose(state[1:8], 0.0, atol=stopping_delta)
+
+        #     # Check if the system is considered stopped based on various conditions
+        #     stopped = (
+        #         stopped_buffer <= 0
+        #         and small_delta
+        #         and (not next_is_not_final)
+        #         and gripper_state_no_change
+        #     )
+
+        #     stopped_buffer = 4 if stopped else stopped_buffer - 1
+        #     # If change in gripper, or end of episode.
+        #     last = i == (len(demo) - 1)
+        #     if i != 0 and (state[0] != prev_gripper_open or last or stopped):
+        #         episode_keypoints.append(i)
+        #     prev_gripper_open = state[0]
+        # if (
+        #     len(episode_keypoints) > 1
+        #     and (episode_keypoints[-1] - 1) == episode_keypoints[-2]
+        # ):
+        #     episode_keypoints.pop(-2)
+        # return episode_keypoints
+    if method == 'heuristic':
+        prev_gripper_open = demo[0].gripper_open
         stopped_buffer = 0
-        for i, data in enumerate(demo):
-            # Data is a tuple
-            # First index is (obs, info)
-            # Other indices are (obs, reward, termination, truncation, info, action)
-            state = data[0]["low_dim_state"]
-
-            # Check if the current time step is not the second-to-last step in the
-            # demonstration
-            next_is_not_final = i == (len(demo) - 2)
-            # Check if the gripper state hasn't changed for the past two time steps
-            # and one time step ahead
-            # NOTE: Is using np.all_close safer?
-            gripper_state_no_change = i < (len(demo) - 2) and (
-                demo[i + 1][0]["low_dim_state"][0]
-                == state[0]
-                == demo[i - 1][0]["low_dim_state"][0]
-                == demo[i - 2][0]["low_dim_state"][0]
-            )
-            # Check if all joint velocities are close to zero within the given tolerance
-            small_delta = np.allclose(state[1:8], 0.0, atol=stopping_delta)
-
-            # Check if the system is considered stopped based on various conditions
-            stopped = (
-                stopped_buffer <= 0
-                and small_delta
-                and (not next_is_not_final)
-                and gripper_state_no_change
-            )
-
+        for i, obs in enumerate(demo):
+            stopped = _is_stopped(demo, i, obs, stopped_buffer, stopping_delta)
             stopped_buffer = 4 if stopped else stopped_buffer - 1
             # If change in gripper, or end of episode.
             last = i == (len(demo) - 1)
-            if i != 0 and (state[0] != prev_gripper_open or last or stopped):
+            if i != 0 and (obs.gripper_open != prev_gripper_open or
+                           last or stopped):
                 episode_keypoints.append(i)
-            prev_gripper_open = state[0]
-        if (
-            len(episode_keypoints) > 1
-            and (episode_keypoints[-1] - 1) == episode_keypoints[-2]
-        ):
+            prev_gripper_open = obs.gripper_open
+        if len(episode_keypoints) > 1 and (episode_keypoints[-1] - 1) == \
+                episode_keypoints[-2]:
             episode_keypoints.pop(-2)
+        print('Found %d keypoints.' % len(episode_keypoints),
+                      episode_keypoints)
         return episode_keypoints
-
     elif method == "random":
         # Randomly select keypoints.
         episode_keypoints = np.random.choice(
@@ -423,6 +453,17 @@ class RLBenchEnv(gym.Env):
             info["desc"] = desc
         return obs, info
 
+    def reset_to_demo(self, demo: Demo, seed=None, options=None, robot_state_keys: dict = None):
+        super().reset(seed=seed)
+        if self._rlbench_env is None:
+            self._launch()
+        demo.restore_state()
+        variation_index = demo._observations[0].misc["variation_index"]
+        self._task.set_variation(variation_index)
+        _, rlb_obs = self._task.reset(demo)
+        obs = _extract_obs(rlb_obs, self._observation_config, robot_state_keys)
+        return obs, {"demo": 0}
+    
     def close(self):
         if self._rlbench_env is not None:
             self._rlbench_env.shutdown()
@@ -465,7 +506,7 @@ class RLBenchEnv(gym.Env):
                 "dataset_root was not defined. Generating live demos. "
                 "This may take a while..."
             )
-            raw_demos = self._task.get_demos(num_demos, live_demos=live_demos)
+            raw_demos = self._task.get_demos(num_demos, live_demos=live_demos, random_selection=False)
         else:
             raw_demos = get_stored_demos(
                 num_demos,
@@ -559,6 +600,7 @@ def _get_demo_fn(cfg, num_demos, demo_list):
     if action_mode_type == ActionModeType.END_EFFECTOR_POSE:
         obs_config_demo.joint_velocities = True
         obs_config_demo.gripper_matrix = True
+        obs_config_demo.task_low_dim_state = True
     elif action_mode_type == ActionModeType.JOINT_POSITION:
         pass
     else:
