@@ -60,8 +60,8 @@ replay:
 
 # logging settings
 wandb:  # weight and bias
-  use: false
-  project: RoboBase
+  use: true
+  project: RoboBase_acc
   name: null
   save_dir: ${exp_root}
 
@@ -80,7 +80,7 @@ log_eval_video: true
 log_pretrain_every: 100
 save_csv: false
 
-exp_root: /mnt/bn/robotics-data-mx/robobase_logs/
+exp_root: /home/zha414/fire/manipulation/robobase_accelerate/logs
 
 hydra:
   run:
