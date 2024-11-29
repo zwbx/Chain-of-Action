@@ -66,6 +66,7 @@ def _create_default_replay_buffer(
         replay_capacity=cfg.replay.size if not demo_replay else cfg.replay.demo_size,
         action_shape=action_space.shape,
         action_dtype=action_space.dtype,
+        # action_ar=cfg.env.action_ar,
         reward_shape=(),
         reward_dtype=np.float32,
         observation_elements=observation_space,

@@ -11,6 +11,7 @@ env:
   # dataset_root: ''
   dataset_root: /home/zha414/fire/manipulation/robobase_accelerate/data_raw
   action_mode: JOINT_POSITION
+  action_ar: True
   # END_EFFECTOR_POSE
   # JOINT_POSITION
   cameras: ["front", "wrist", "left_shoulder", "right_shoulder"]

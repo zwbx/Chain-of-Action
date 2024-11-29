@@ -60,7 +60,7 @@ replay:
 
 # logging settings
 wandb:  # weight and bias
-  use: true
+  use: false
   project: RoboBase_acc
   name: null
   save_dir: ${exp_root}

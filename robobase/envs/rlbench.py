@@ -33,6 +33,7 @@ from robobase.utils import (
 from robobase.utils import (
     observations_to_action_with_onehot_gripper,
     observations_to_action_with_onehot_gripper_nbp,
+    observations_to_action_with_onehot_gripper_ar,
     rescale_demo_actions,
 )
 from robobase.envs.env import EnvFactory, Demo, DemoEnv
@@ -354,6 +355,7 @@ class RLBenchEnv(gym.Env):
         observation_config: ObservationConfig,
         action_mode: ActionMode,
         action_mode_type: ActionModeType = ActionModeType.JOINT_POSITION,
+        action_ar: bool = False,
         arm_max_velocity: float = 1.0,
         arm_max_acceleration: float = 4.0,
         dataset_root: str = "",
@@ -366,6 +368,7 @@ class RLBenchEnv(gym.Env):
         self._observation_config = observation_config
         self._action_mode = action_mode
         self._action_mode_type = action_mode_type
+        self._action_ar = action_ar
         self._arm_max_velocity = arm_max_velocity
         self._arm_max_acceleration = arm_max_acceleration
         self._dataset_root = dataset_root
@@ -499,6 +502,39 @@ class RLBenchEnv(gym.Env):
 
         return nbp_demos
 
+
+    def get_ar_demos(self, demos):
+        demo_augmentation = True
+        demo_augmentation_every_n = 5
+
+        nbp_demos = []
+        for idx_demo, demo in enumerate(demos):
+            episode_keypoints = keypoint_discovery(demo)
+            for idx, step in enumerate(demo):
+                if not demo_augmentation and idx > 0:
+                    break
+                if idx % demo_augmentation_every_n != 0:
+                    continue
+
+                nbp_demo = []
+                nbp_demo.append(step)
+
+                # If our starting point is past one of the keypoints, then remove it
+                while len(episode_keypoints) > 0 and idx >= episode_keypoints[0]:
+                    episode_keypoints = episode_keypoints[1:]
+
+                if len(episode_keypoints) == 0:
+                    break
+
+                for episode_keypoint in episode_keypoints:
+                    keypoint = copy.deepcopy(demo[episode_keypoint])
+                    nbp_demo.append(keypoint)
+
+                nbp_demos.append(nbp_demo)
+
+        return nbp_demos
+    
+
     def get_demos(self, num_demos: int, robot_state_keys: dict = None) -> List[Demo]:
         live_demos = not self._dataset_root
         if live_demos:
@@ -523,7 +559,10 @@ class RLBenchEnv(gym.Env):
             raw_demos = self.get_nbp_demos(raw_demos)
             action_func = observations_to_action_with_onehot_gripper_nbp
         elif self._action_mode_type == ActionModeType.JOINT_POSITION:
+            if self._action_ar:
+                raw_demos = self.get_ar_demos(raw_demos)
             action_func = observations_to_action_with_onehot_gripper
+
 
             # NOTE: Check there is a misc["joint_position_action"]
             is_joint_position_action_included = False
@@ -538,7 +577,7 @@ class RLBenchEnv(gym.Env):
             )
         else:
             raise KeyError("Wrong action mode.")
-
+        # Convert raw demos to the simple format, remove unnecessary keys
         demos_to_load = _convert_rlbench_demos_for_loading(
             raw_demos,
             self._observation_config,
@@ -602,6 +641,7 @@ def _get_demo_fn(cfg, num_demos, demo_list):
         obs_config_demo.gripper_matrix = True
         obs_config_demo.task_low_dim_state = True
     elif action_mode_type == ActionModeType.JOINT_POSITION:
+        obs_config_demo.joint_velocities = True
         pass
     else:
         raise ValueError(f"Unsupported action mode type: {cfg.env.action_mode}")
@@ -648,6 +688,7 @@ def _make_env(cfg: DictConfig, obs_config: dict):
         obs_config,
         action_mode,
         action_mode_type=ActionModeType[cfg.env.action_mode],
+        action_ar = cfg.env.action_ar,
         arm_max_velocity=cfg.env.arm_max_velocity,
         arm_max_acceleration=cfg.env.arm_max_acceleration,
         dataset_root=cfg.env.dataset_root,

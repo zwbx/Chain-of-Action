@@ -419,6 +419,40 @@ def observations_to_action_with_onehot_gripper(
         return None
     return action
 
+def observations_to_action_with_onehot_gripper_ar(
+    current_observation: DemoStep,
+    next_observation: DemoStep,
+    action_space: Box,
+):
+    """Calculates the action linking two sequential observations.
+
+    Args:
+        current_observation (DemoStep): the observation made before the action.
+        next_observation (DemoStep): the observation made after the action.
+        action_space (Box): the action space of the unwrapped env.
+
+    Returns:
+        np.ndarray: action taken at current observation. Returns None if action
+            outside action_space.
+    """
+    action = np.concatenate(
+        [
+            (
+                next_observation.misc["joint_position_action"][:-1]
+                - current_observation.joint_positions
+                if "joint_position_action" in next_observation.misc
+                else next_observation.joint_positions
+                - current_observation.joint_positions
+            ),
+            [1.0 if next_observation.gripper_open == 1 else 0.0],
+        ]
+    ).astype(np.float32)
+    if np.any(action[:-1] > action_space.high[:-1]) or np.any(
+        action[:-1] < action_space.low[:-1]
+    ):
+        return None
+    return action
+
 
 def observations_to_action_with_onehot_gripper_nbp(
     current_observation: DemoStep,

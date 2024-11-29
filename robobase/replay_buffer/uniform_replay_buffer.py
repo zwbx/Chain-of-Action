@@ -117,6 +117,7 @@ class UniformReplayBuffer(ReplayBuffer):
         gamma: float = 0.99,
         action_shape: tuple = (),
         action_dtype: Type[np.dtype] = np.float32,
+        action_ar: str = None,
         reward_shape: tuple = (),
         reward_dtype: Type[np.dtype] = np.float32,
         observation_elements: spaces.Dict = None,
@@ -262,6 +263,9 @@ class UniformReplayBuffer(ReplayBuffer):
         self._samples_since_last_fetch = self._fetch_every
         save_snapshot = False
         self._save_snapshot = save_snapshot
+
+        # action mode
+        self._action_mode = action_mode
 
         logging.info(
             "Creating a %s replay memory with the following parameters:",
@@ -710,6 +714,111 @@ class UniformReplayBuffer(ReplayBuffer):
         return replay_sample
 
     def _sample_non_sequential(self, global_index=None):
+        #### NOTE ###
+        # This function first get a random index for sampling an episode.
+        # it considerate the frame stack and nstep when sampling the index.
+        # Then, it constructs the replay sample from the sampled index.
+        # it use _obs_signature to get the observation keys and deal with action seperately.
+        #### NOTE ###
+        
+        # Sample transition index
+        if global_index is None:
+            # NOTE: here global index is the index of the start of episode.
+            episode, global_index = self._sample_episode()
+            min_idx, max_idx = 0, np.maximum(episode_len(episode) - self._nstep + 1, 1)
+            idx = np.random.randint(min_idx, max_idx)
+
+            # global index of the transition = index of episode_start + transition_idx
+            global_index += idx
+
+        else:
+            if global_index not in self._global_idxs_to_episode_and_transition_idx:
+                # This worker does not have this sample
+                return None
+
+            (
+                episode_fn,
+                transition_idx,
+            ) = self._global_idxs_to_episode_and_transition_idx[global_index]
+            episode = self._episodes[episode_fn]
+            idx = transition_idx
+
+        # Construct replay sample from sampled transition index
+        ep_len = episode_len(episode)
+        next_idx = idx + self._nstep
+        # If next_idx > eps_len, next_idx will point to final_obs
+        replay_sample = {}
+
+        # Handle frame stacking, calculate observation indices.
+        obs_start_idx = (idx - self._frame_stacks) + 1
+        next_obs_start_idx = (next_idx - self._frame_stacks) + 1
+        # Obs_idxs contains indices of all frames, considering frame stacking.
+        # - Turn all negative idxs to 0
+        obs_idxs = list(
+            map(lambda x: np.clip(x, 0, ep_len), range(obs_start_idx, idx + 1))
+        )
+        next_obs_idxs = list(
+            map(
+                lambda x: np.clip(x, 0, ep_len),
+                range(next_obs_start_idx, next_idx + 1),
+            )
+        )
+
+        # Add observation frames into sample
+        for name in self._obs_signature.keys():
+            replay_sample[name] = episode[name][obs_idxs]
+            # Retrieve tp1 observations
+            replay_sample[name + "_tp1"] = episode[name][next_obs_idxs]
+
+        # Handle action sequences
+        action_start_idx = idx
+        action_end_idx = min(idx + self._action_seq_len, ep_len)
+        # - action_idxs contains indices of all action, considering action sequences.
+        action_idxs = list(range(action_start_idx, action_end_idx))
+        action_seq = episode[ACTION][action_idxs]
+        # - Pad zeros to the end if action_sequences exceeds eps_len
+        if len(action_seq) < self._action_seq_len:
+            num_action_to_pad = self._action_seq_len - len(action_seq)
+            action_seq = np.concatenate(
+                [
+                    action_seq,
+                    np.zeros(
+                        (num_action_to_pad, *action_seq.shape[1:]), dtype=np.float32
+                    ),
+                ],
+                axis=0,
+            )
+        replay_sample[ACTION] = action_seq
+
+        # Add the rest
+        discount_slice_len = next_idx - idx
+        replay_sample.update(
+            {
+                REWARD: np.sum(
+                    episode[REWARD][idx:next_idx]
+                    * self._cumulative_discount_vector[:discount_slice_len]
+                ),
+                TERMINAL: episode[TERMINAL][next_idx - 1],
+                TRUNCATED: episode[TRUNCATED][next_idx - 1],
+                INDICES: global_index,
+                DISCOUNT: self._gamma**discount_slice_len,  # effective discount
+            }
+        )
+        # Add remaining (extra) items
+        for name in self._storage_signature.keys():
+            if name not in replay_sample:
+                replay_sample[name] = episode[name][idx]
+
+        return replay_sample
+
+    def _sample_non_sequential_ar(self, global_index=None):
+        #### NOTE ###
+        # This function first get a random index for sampling an episode.
+        # it considerate the frame stack and nstep when sampling the index.
+        # Then, it constructs the replay sample from the sampled index.
+        # it use _obs_signature to get the observation keys and deal with action seperately.
+        #### NOTE ###
+        
         # Sample transition index
         if global_index is None:
             # NOTE: here global index is the index of the start of episode.
@@ -819,7 +928,10 @@ class UniformReplayBuffer(ReplayBuffer):
         if self._sequential:
             return self._sample_sequential(global_index)
         else:
-            return self._sample_non_sequential(global_index)
+            if self._action_ar:
+                return self._sample_non_sequential_ar(global_index) 
+            else:
+                return self._sample_non_sequential(global_index)
 
     @override
     def sample(self, batch_size: int = None, indices: list[int] = None) -> np.ndarray:
