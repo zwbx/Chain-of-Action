@@ -1,5 +1,0 @@
-# @package _global_
-
-defaults:
-  - ../env: null  # Please specify environment to use in command line
-  - ../method: drqv2
